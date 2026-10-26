@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Database, Download, Droplets, Info, Monitor, Moon, Sun, Trash2, Upload } from 'lucide-react';
+import { CheckCircle2, Database, Download, Droplets, Info, Monitor, Moon, RefreshCw, Sun, Trash2, Upload, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,12 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useSettings, type RateChoice } from '@/lib/settings';
+import { useSettings, type AudioSourceChoice, type RateChoice } from '@/lib/settings';
 import { useVocab, exportPayload, parseImport } from '@/lib/vocabulary';
 import { clearAllCaches } from '@/lib/cache';
 import { RULES_VERSION } from '@/lib/pronunciation';
-import { speakNow, getSpeech } from '@/lib/speech-client';
+import { speakNow, getSpeech, useTtsStatus } from '@/lib/speech-client';
 import type { GermanSpeech } from '@/lib/speech';
+import { probeOnlineTts } from '@/lib/tts-provider';
 import { idbAvailable } from '@/lib/storage/idb';
 
 function download(filename: string, content: string, type: string) {
@@ -35,6 +36,11 @@ function download(filename: string, content: string, type: string) {
   } catch {
     /* ignore */
   }
+}
+
+/** Re-run the centralized TTS compatibility check ("Check Audio Compatibility"). */
+function ttsRecheck(): void {
+  void import('@/lib/tts-status').then((m) => m.ttsStatus.recheck());
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -53,18 +59,23 @@ export function SettingsView() {
   const { theme, setTheme } = useTheme();
   const settings = useSettings();
   const { entries, replaceAll, clearAll } = useVocab();
+  const tts = useTtsStatus();
   const [speech, setSpeech] = useState<GermanSpeech | null>(null);
+  const [onlineState, setOnlineState] = useState<'unknown' | 'checking' | 'yes' | 'no'>('unknown');
   const [cacheCount, setCacheCount] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setSpeech(getSpeech());
+    setOnlineState('checking');
+    void probeOnlineTts().then((r) =>
+      setOnlineState(r.configured ? 'yes' : 'no')
+    );
     void import('@/lib/cache').then((m) => m.cacheSize().then(setCacheCount));
   }, []);
 
   const voices = speech?.getGermanVoices() ?? [];
-  const ttsSupported = speech?.supported ?? false;
 
   return (
     <div className="pt-6">
@@ -98,17 +109,82 @@ export function SettingsView() {
         </div>
       </Section>
 
-      <Section title="স্পিচ (Voice)">
+      <Section title="স্পিচ ও অডিও (Voice & Audio)">
+        {/* Compatibility snapshot — only real, detected facts */}
+        <div className="rounded-xl border bg-muted/40 p-3 text-xs leading-relaxed">
+          <p className="flex items-center gap-1.5 font-medium font-bangla">
+            {tts.support === 'unsupported' ? (
+              <XCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+            ) : (tts.support === 'ready' && tts.german.length > 0) ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+            ) : (
+              <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            )}
+            {tts.support === 'unsupported'
+              ? 'এই ব্রাউজারে Web Speech API নেই'
+              : tts.support === 'checking'
+                ? 'ভয়েস তালিকা লোড হচ্ছে…'
+                : tts.german.length > 0
+                  ? `জার্মান ভয়েস পাওয়া গেছে (${tts.german.length}টি) — ${tts.german[0].accentLabel}`
+                  : 'এই ডিভাইসে জার্মান ভয়েস নেই'}
+          </p>
+          <p className="mt-1 font-bangla text-muted-foreground">
+            অনলাইন প্রোভাইডার:{' '}
+            {onlineState === 'checking'
+              ? 'পরীক্ষা হচ্ছে…'
+              : onlineState === 'yes'
+                ? 'কনফিগার করা আছে ✓ (ইন্টারনেট লাগে)'
+                : 'কনফিগার করা হয়নি — কী ছাড়া অ্যাপ পুরোপুরি চলে'}
+          </p>
+        </div>
+
+        {/* Audio source preference — only real choices */}
         <div>
-          <Label className="font-bangla">জার্মান ভয়েস</Label>
-          {!ttsSupported ? (
+          <Label htmlFor="audio-source" className="font-bangla">অডিও সোর্স</Label>
+          <Select
+            value={settings.audioSource}
+            onValueChange={(v) => settings.setAudioSource(v as AudioSourceChoice)}
+          >
+            <SelectTrigger id="audio-source" aria-label="Preferred audio source" className="mt-1.5">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto" className="font-bangla">স্বয়ংক্রিয় — ব্রাউজার ভয়েস, না থাকলে অনলাইন</SelectItem>
+              <SelectItem value="browser" className="font-bangla">শুধু ব্রাউজার ভয়েস (অফলাইনেও চলে)</SelectItem>
+              <SelectItem value="online" disabled={onlineState === 'no'} className="font-bangla">
+                শুধু অনলাইন জার্মান অডিও (ইন্টারনেট লাগে){onlineState === 'no' ? ' — কনফিগার করা নেই' : ''}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Automatic fallback to the online provider (opt-in, honest) */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label htmlFor="online-fallback" className="font-bangla">জার্মান ভয়েস না পেলে অনলাইন অডিও</Label>
+            <p className="text-[11px] text-muted-foreground font-bangla">
+              চালু থাকলে ব্রাউজারে জার্মান ভয়েস না থাকলে কনফিগার করা অনলাইন প্রোভাইডার চেষ্টা হবে — এর জন্য ইন্টারনেট লাগে
+            </p>
+          </div>
+          <Switch
+            id="online-fallback"
+            checked={settings.onlineFallback}
+            onCheckedChange={settings.setOnlineFallback}
+          />
+        </div>
+
+        {/* Preferred German voice — auto or manual, only installed voices */}
+        <div>
+          <Label className="font-bangla">জার্মান ভয়েস (ব্রাউজার)</Label>
+          {tts.support === 'unsupported' ? (
             <p className="mt-1.5 text-sm text-destructive font-bangla">
               এই ব্রাউজারে Web Speech API নেই — Chrome/Edge ব্যবহার করো।
             </p>
           ) : voices.length === 0 ? (
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground font-bangla">
-              এই ডিভাইসে জার্মান (de) ভয়েস পাওয়া যায়নি। OS-এ German voice pack ইনস্টল থাকলে
-              এখানে দেখা যাবে। অন্য ভয়েসে জার্মান লেখা উচ্চারণ হবে — গুণমান কম হবে।
+              {tts.support === 'checking'
+                ? 'ভয়েস তালিকা আসছে…'
+                : 'এই ডিভাইসে জার্মান (de) ভয়েস পাওয়া যায়নি। OS-এ German voice pack ইনস্টল থাকলে এখানে দেখা যাবে। ইংরেজি ভয়েস দিয়ে জার্মান পড়া হয় না — ভুল উচ্চারণ শেখার ক্ষতি করে।'}
             </p>
           ) : (
             <Select value={settings.voiceName ?? 'auto'} onValueChange={(v) => settings.setVoiceName(v === 'auto' ? null : v)}>
@@ -125,7 +201,14 @@ export function SettingsView() {
               </SelectContent>
             </Select>
           )}
+          {voices.length > 0 && (
+            <p className="mt-1 text-[11px] text-muted-foreground font-bangla">
+              ভয়েসের অঞ্চল পাশে লেখা থাকে — de-DE স্ট্যান্ডার্ড জার্মান, de-AT অস্ট্রিয়ান, de-CH সুইস।
+              আগের ডিভাইসের সেভ করা ভয়েস এই ডিভাইসে না থাকলে সেরা ভয়েস নিজেই বসে যাবে।
+            </p>
+          )}
         </div>
+
         <div>
           <Label className="font-bangla">ডিফল্ট স্পিড</Label>
           <div role="radiogroup" aria-label="Default playback speed" className="mt-1.5 flex gap-2">
@@ -145,6 +228,7 @@ export function SettingsView() {
             ))}
           </div>
         </div>
+
         <div className="flex items-center justify-between gap-3">
           <div>
             <Label htmlFor="autoplay" className="font-bangla">অনুবাদ শেষ হলে স্বয়ংক্রিয় প্লে</Label>
@@ -156,10 +240,47 @@ export function SettingsView() {
             onCheckedChange={settings.setAutoplay}
           />
         </div>
-        {voices.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => speakNow('Guten Tag! Wie geht es dir?')} className="rounded-xl font-bangla">
-            ভয়েস টেস্ট করো
+
+        {/* Test + compatibility actions */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => speakNow('Guten Tag! Wie geht es dir?')}
+            className="rounded-xl font-bangla"
+          >
+            জার্মান ভয়েস টেস্ট করো
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              ttsRecheck();
+              toast({ title: 'অডিও সামঞ্জস্য আবার পরীক্ষা হচ্ছে…' });
+            }}
+            disabled={tts.support === 'checking'}
+            className="rounded-xl font-bangla"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${tts.support === 'checking' ? 'animate-spin' : ''}`} aria-hidden="true" />
+            অডিও সামঞ্জস্য পরীক্ষা
+          </Button>
+        </div>
+
+        {/* Troubleshooting — shown only when there is genuinely no German voice */}
+        {tts.support !== 'checking' && voices.length === 0 && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs leading-relaxed font-bangla">
+            <p className="font-semibold text-foreground">জার্মান অডিও চালু করতে সমস্যা?</p>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-muted-foreground">
+              <li>Chrome বা Edge ব্রাউজার ব্যবহার করো — German voice pack বিল্ট-ইন থাকে।</li>
+              <li>OS সেটিংসে German (de-DE) text-to-speech voice ইনস্টল/সক্রিয় করো।</li>
+              <li>ইনস্টল করার পর অ্যাপ রিলোড দিয়ে “অডিও সামঞ্জস্য পরীক্ষা” চাপো।</li>
+              <li>ইনস্টল করা PWA-র ভয়েসও OS/ব্রাউজার থেকেই আসে — ব্রাউজার আপডেট করে দেখো।</li>
+              <li>প্রোভাইডার কনফিগার করা থাকলে উপরের অনলাইন অডিও ফলব্যাক চালু করো (ইন্টারনেট লাগবে)।</li>
+            </ol>
+            <p className="mt-1.5 text-muted-foreground">
+              এর মধ্যে উচ্চারণ গাইড (বাংলা লিপিতে), সেভ করা শব্দ আর অর্থ — সব অফলাইনেও চলবে।
+            </p>
+          </div>
         )}
       </Section>
 

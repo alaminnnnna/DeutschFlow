@@ -10,7 +10,7 @@ import { HistoryView } from '@/components/deutschflow/history-view';
 import { ProgressView } from '@/components/deutschflow/progress-view';
 import { SettingsView } from '@/components/deutschflow/settings-view';
 import { ThemeToggle } from '@/components/deutschflow/theme-toggle';
-import { VoiceSettings } from '@/components/deutschflow/voice-settings';
+import { AudioStatus } from '@/components/deutschflow/audio-status';
 import { InstallPrompt, OfflineIndicator, ServiceWorkerRegistrar } from '@/components/deutschflow/pwa';
 import { detectLanguage } from '@/lib/language';
 import { pronunciation } from '@/lib/pronunciation';
@@ -81,7 +81,6 @@ export default function Home() {
   const paused = useSpeechStore((s) => s.paused);
   const rate = useSpeechStore((s) => s.rate);
   const speechNotice = useSpeechStore((s) => s.notice);
-  const voiceName = useSettings((s) => s.voiceName);
 
   const play = useCallback((text: string, newRate?: number) => {
     speakNow(text, newRate);
@@ -225,13 +224,7 @@ export default function Home() {
       onSectionChange={setSection}
       headerRight={
         <>
-          <VoiceSettings
-            speech={getSpeech()}
-            selectedVoice={voiceName}
-            onSelectVoice={(name) => {
-              useSettings.getState().setVoiceName(name);
-            }}
-          />
+          <AudioStatus onOpenSettings={() => setSection('settings')} />
           <ThemeToggle />
         </>
       }

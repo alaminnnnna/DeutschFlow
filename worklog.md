@@ -129,3 +129,25 @@ Stage Summary:
 - Files changed: src/components/deutschflow/app-shell.tsx
 - If the phone still misbehaves: one open swaps the SW (skipWaiting+purge), next reload runs this code
 - Pushed to https://github.com/alaminnnnna/DeutschFlow.git main
+
+---
+Task ID: 6
+Agent: main (Z.ai)
+Task: Universal TTS compatibility & fallback system (spec: detect capabilities, playback fallback priority, UI status, audio settings, online provider, PWA/offline, reliability, tests) + push
+
+Work Log:
+- Inspected existing architecture: GermanSpeech (speech.ts) already handles de-voice ranking/chunking/cancel/iOS-priming; speech-client.ts had a zustand store + speakNow; settings persisted via zustand persist; IDB cache store available; no online provider existed.
+- NEW src/lib/tts-status.ts — centralized capability/status manager: checks speechSynthesis + SpeechSynthesisUtterance existence, waits out async voice lists (poll + voiceschanged + 6s window), classifyGermanVoices/pickGermanVoice/scoreGermanVoice pure functions (de-DE > de-AT > de-CH > de, non-German never eligible), recheck(), auto recheck on online/visibilitychange, useSyncExternalStore binding, fully injectable deps for tests.
+- NEW src/lib/tts-provider.ts — online provider client: probe (5-min cache), fetch with timeout+abort, error taxonomy (unconfigured/network/timeout/rate-limit/provider/bad-response), IDB blob caching (30d TTL, only real audio assets), single HTMLAudioElement player with stop, never claims speechSynthesis yields MP3s.
+- NEW src/app/api/tts/route.ts — optional server proxy: TTS_PROVIDER=voicerss|google + TTS_API_KEY (env only, never in frontend, never logged/echoed), 501 unconfigured, 429/503 rate-limit mapping, 10s upstream timeout, probe endpoint; documented in .env.example. No provider is mandatory.
+- settings.ts: added audioSource (auto/browser/online) + onlineFallback (opt-in) persisted preferences.
+- speech-client.ts: orchestration with honest priority — native de-DE → accent-labelled de-AT/de-CH notice → online only if configured + allowed → manual alternatives; saved-voice-missing falls back to best German voice with a notice; 'checking' state never claims failure; stopSpeech stops both systems; speaking folds in onlinePlaying so Stop buttons work; overlap prevention (stop online + cancel native before any play).
+- NEW audio-status.tsx header indicator + panel: status dot (green de-DE / amber other de / blue online-available / red none / spinner loading), aria-live status, source + provider state, explicit "Use online German audio" action, Check Audio Compatibility recheck, working Stop button, troubleshooting; replaced the old VoiceSettings popover (deleted).
+- settings-view: speech section → full "স্পিচ ও অডিও" block: live compatibility snapshot, source select (online option only when configured), fallback switch (togglable even when unconfigured, honest hint), voice select with accent labels + saved-voice note, Test German Voice, Check Compatibility, troubleshooting only when no German voice.
+- NEW tests/tts.test.ts (bun test, 26 tests): voice classification/ranking, saved-voice grace, manager scenarios (unsupported, no Utterance, de-DE ready, alternative accent only, empty→late population, wait-window close, recheck), provider probe + all error classifications + offline + timeout + empty text + stop idempotency. All pass.
+- Verified live in browser (headless Chrome genuinely has NO German voice → real fallback path): indicator settles to honest 'no usable German voice'; panel shows source/provider/troubleshooting; Play → honest manual notice (no fake audio, no English voice); enabling fallback → real /api/tts attempt → 501 → honest unconfigured notice; zero console errors; eslint clean; production build OK; dev restarted.
+
+Stage Summary:
+- Files: src/lib/tts-status.ts, src/lib/tts-provider.ts, src/app/api/tts/route.ts, src/lib/speech.ts, src/lib/speech-client.ts, src/lib/settings.ts, src/components/deutschflow/audio-status.tsx (new), voice-settings.tsx (deleted), settings-view.tsx, src/app/page.tsx, tests/tts.test.ts, package.json (test script), .env.example
+- Genuinely working now: native detection + German-only playback + accent labels + saved-voice grace + honest offline/unavailable states + manual alternatives. Requires provider config to activate: online tier (set TTS_PROVIDER + TTS_API_KEY server-side).
+- Pushed to https://github.com/alaminnnnna/DeutschFlow.git main

@@ -10,6 +10,8 @@
  *  - iOS Safari unlock via a priming utterance inside the user gesture
  */
 
+import { classifyGermanVoices, pickGermanVoice } from './tts-status';
+
 export type SpeechState = 'idle' | 'speaking' | 'paused' | 'error';
 
 export interface SpeakOptions {
@@ -21,17 +23,9 @@ export interface SpeakOptions {
 }
 
 function scoreVoice(v: SpeechSynthesisVoice): number {
-  let score = 0;
-  const lang = (v.lang || '').toLowerCase().replace('_', '-');
-  if (lang === 'de-de') score += 10;
-  else if (lang.startsWith('de')) score += 6;
-  else return -1; // not a German voice at all
-  const name = v.name || '';
-  if (/natural|neural|online/i.test(name)) score += 4;
-  if (/google/i.test(name)) score += 3;
-  if (/premium|enhanced|quality/i.test(name)) score += 2;
-  if (v.localService) score += 1;
-  return score;
+  // Scoring/classification lives in tts-status.ts — the single source of
+  // truth shared with the capability manager, settings UI and tests.
+  return classifyGermanVoices([v])[0]?.score ?? -1;
 }
 
 export class GermanSpeech {
@@ -78,12 +72,9 @@ export class GermanSpeech {
   }
 
   private pickVoice(preferredName?: string | null): SpeechSynthesisVoice | null {
-    const german = this.getGermanVoices();
-    if (preferredName) {
-      const found = german.find((v) => v.name === preferredName);
-      if (found) return found;
-    }
-    return german[0] ?? null;
+    // A saved voice that no longer exists on this device (device switch,
+    // removed voice pack) gracefully falls back to the best German voice.
+    return pickGermanVoice(classifyGermanVoices(this.voices), preferredName)?.voice ?? null;
   }
 
   onStateChange(cb: (state: SpeechState) => void): () => void {
