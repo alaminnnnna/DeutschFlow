@@ -97,3 +97,19 @@ Stage Summary:
 - Files changed: public/sw.js, src/components/deutschflow/pwa.tsx, src/lib/curated.ts, src/components/deutschflow/app-shell.tsx
 - Capsule now: grab zoom 1.08, velocity stretch/squash/swell, hard-locked cross axis +/-12px, rail overhang 36px for swap, magnet radius 64px — all preserved
 - Pushed to https://github.com/alaminnnnna/DeutschFlow.git main
+
+---
+Task ID: 4
+Agent: main (Z.ai)
+Task: Tab bar swipe works on PC but not on phone — fix + push
+
+Work Log:
+- Root causes identified: (1) touch-action:none was only on the active button — mobile browsers (iOS Safari/Android) can still claim the gesture mid-drag via scroll detection and fire pointercancel, killing the drag; (2) the phone was very likely still pinned to the stale v1 service worker (dev chunks are un-hashed; v1 cache-first never revalidates), so even fixed code may never have run there.
+- app-shell.tsx: added touch-none to BOTH nav ULs (mobile bar + desktop dock) so no touch starting on the bar can ever become a page scroll; added a per-gesture non-passive touchmove preventDefault veto attached only for pointerType 'touch', removed on gesture stop — the bulletproof fix for mobile Safari pointercancel quirks.
+- sw.js: install now chains self.skipWaiting() so a new worker takes control immediately and the activate purge runs on the FIRST open — a stale worker can never pin old JS for more than one reload.
+- Verified touch-type drag (pointer + real TouchEvent mid-drag): capsule travels on locked rail, settles scale 1, drop navigates; zero console errors. eslint clean, production build OK, dev server restarted.
+
+Stage Summary:
+- Files changed: src/components/deutschflow/app-shell.tsx, public/sw.js
+- Phone healing flow: first open swaps worker + purges caches, next reload runs fully fresh code
+- Pushed to https://github.com/alaminnnnna/DeutschFlow.git main

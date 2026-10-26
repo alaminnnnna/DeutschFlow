@@ -509,6 +509,14 @@ function useLiquidNav(
         abortGesture();
       };
 
+      /** Touch veto: some mobile browsers still try to claim a drag for
+       *  scrolling/gesture detection mid-move (pointercancel) even under
+       *  touch-action, so a non-passive touchmove preventDefault guarantees
+       *  the finger owns the capsule until release. Mouse drags skip it. */
+      const onTouchMove = (ev: TouchEvent) => {
+        if (gesture.dragging && ev.cancelable) ev.preventDefault();
+      };
+
       gesture = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -528,6 +536,7 @@ function useLiquidNav(
           window.removeEventListener('pointermove', onMove);
           window.removeEventListener('pointerup', onUp);
           window.removeEventListener('pointercancel', onCancel);
+          window.removeEventListener('touchmove', onTouchMove);
           if (gesture.raf !== null) cancelAnimationFrame(gesture.raf);
           gesture.raf = null;
         },
@@ -535,6 +544,9 @@ function useLiquidNav(
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
+      if (e.pointerType === 'touch') {
+        window.addEventListener('touchmove', onTouchMove, { passive: false });
+      }
       gestureRef.current = gesture;
     },
     [
@@ -732,7 +744,7 @@ function DesktopDock({
             onPointerDown={onPointerDown}
             onLostPointerCapture={onLostCapture}
             onClickCapture={onClickCapture}
-            className="relative select-none space-y-1"
+            className="relative touch-none select-none space-y-1"
           >
             {rect && (
               <motion.span
@@ -835,7 +847,7 @@ function FloatingTabBar({
         onPointerDown={onPointerDown}
         onLostPointerCapture={onLostCapture}
         onClickCapture={onClickCapture}
-        className="df-nav-glass pointer-events-auto relative flex select-none items-center gap-0.5 rounded-[26px] border border-border/70 bg-card/72 p-1.5 shadow-[0_12px_36px_-10px_rgba(15,26,46,0.35)] backdrop-blur-2xl backdrop-saturate-150"
+        className="df-nav-glass pointer-events-auto relative flex touch-none select-none items-center gap-0.5 rounded-[26px] border border-border/70 bg-card/72 p-1.5 shadow-[0_12px_36px_-10px_rgba(15,26,46,0.35)] backdrop-blur-2xl backdrop-saturate-150"
       >
         {rect && (
           <motion.span

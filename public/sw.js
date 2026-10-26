@@ -12,9 +12,10 @@
  *                           IndexedDB cache (see src/lib/cache.ts).
  *   - POST/DELETE etc.:     never intercepted.
  *
- * Updates: a new version installs and WAITS (no auto-reload). The page shows
- * a non-blocking notice; reloading activates it — an active review session
- * is never interrupted from underneath the user.
+ * Updates: a new version installs and takes control immediately
+ * (skipWaiting + claim). The page already loaded keeps its current code; the
+ * NEXT reload picks the new version up and old caches are purged on activate,
+ * so a stale worker can never pin old JS for more than one reload.
  */
 
 /* v2: purge the v1 asset caches — v1 could pin stale /_next/static chunks
@@ -43,7 +44,7 @@ self.addEventListener('install', (event) => {
           .then((cache) => cache.add(new Request(url, { cache: 'reload' })))
           .catch(() => {}) // a failed icon must never break the install
       )
-    )
+    ).then(() => self.skipWaiting())
   );
 });
 
