@@ -79,3 +79,21 @@ Work Log:
 Stage Summary:
 - Capsule now: grab → swells + lifts; move → stretches/squashes/swells (liquid glass); near item → magnetically snaps; release on bar → navigate + settle exactly; release outside/cancel → spring home.
 - Local repo ready on main (commit 04a1007); only `git push -u origin main` with user credentials remains.
+
+---
+Task ID: 3
+Agent: main (Z.ai)
+Task: Fix console errors (whileTap DOM prop, hydration mismatch, VocabRow onOpen crash) + hard-lock liquid capsule to fixed x/y + push to GitHub
+
+Work Log:
+- Diagnosed all 4 pasted console errors: root cause = PWA service worker (v1) cache-first caching un-hashed Turbopack dev chunks -> stale JS mixed with fresh HTML (whileTap prop from old bundle, VocabRow onOpen undefined, stale class names). Confirmed current source has NO whileTap and both VocabRow callers pass full actions.
+- Fixed real hydration bug: wordOfTheDay() used local-timezone day index (server UTC vs client UTC+6 -> 'der Student' vs 'das Buch' mismatch). Switched to UTC day index in src/lib/curated.ts.
+- Hardened PWA: sw.js VERSION v1 -> v2 (purges old caches on activate); ServiceWorkerRegistrar now unregisters SW + deletes df-* caches in dev and only registers in production.
+- Capsule lock per user request: CROSS_RANGE 96 -> 12 AND replaced cross-axis rubberClamp (which overshoots boundary by dim, real max was +/-24) with pure rubber() envelope saturating exactly at +/-12px — capsule can no longer escape off the bar when pulled up/sideways; rail axis (swap drag) unchanged.
+- Browser verified (SW purged first): up-pull 200px deviates only 5-11px and springs back to exact home (scale 1); swap drag Listen->Settings navigates + settles; plain click navigates; drop outside cancels without nav; desktop + mobile viewports clean; agent-browser errors empty.
+- eslint clean; production build OK (5/5 static pages); dev server restarted.
+
+Stage Summary:
+- Files changed: public/sw.js, src/components/deutschflow/pwa.tsx, src/lib/curated.ts, src/components/deutschflow/app-shell.tsx
+- Capsule now: grab zoom 1.08, velocity stretch/squash/swell, hard-locked cross axis +/-12px, rail overhang 36px for swap, magnet radius 64px — all preserved
+- Pushed to https://github.com/alaminnnnna/DeutschFlow.git main

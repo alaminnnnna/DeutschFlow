@@ -17,7 +17,10 @@
  * is never interrupted from underneath the user.
  */
 
-const VERSION = 'v1';
+/* v2: purge the v1 asset caches — v1 could pin stale /_next/static chunks
+ * (dev serves un-hashed URLs), which once shipped old JS mixed with fresh
+ * HTML (hydration mismatches, dead props like whileTap). */
+const VERSION = 'v2';
 const SHELL_CACHE = `df-shell-${VERSION}`;
 const ASSET_CACHE = `df-assets-${VERSION}`;
 const RUNTIME_CACHE = `df-runtime-${VERSION}`;

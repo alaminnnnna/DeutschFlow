@@ -32,6 +32,24 @@ export function ServiceWorkerRegistrar() {
     const secure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
     if (!secure) return; // service workers need a secure context
 
+    if (process.env.NODE_ENV !== 'production') {
+      // Dev: Turbopack serves /_next/static chunks at UN-hashed URLs, so the
+      // cache-first SW would pin stale JS forever (old props such as whileTap
+      // resurfacing, hydration mismatches). Heal any previously registered
+      // SW and its caches, then stay off the network path entirely.
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => regs.forEach((r) => void r.unregister()))
+        .catch(() => {});
+      caches
+        .keys()
+        .then((keys) =>
+          keys.filter((k) => k.startsWith('df-')).forEach((k) => void caches.delete(k))
+        )
+        .catch(() => {});
+      return;
+    }
+
     let wantReload = false;
     let offerShown = false;
 

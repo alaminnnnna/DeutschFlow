@@ -165,12 +165,14 @@ export const CURATED: CuratedWord[] = [
   { german: 'Wie viele', bangla: 'কয়টা', pos: 'question', level: 'A1', topic: 'প্রশ্ন' },
 ];
 
-/** Deterministic word of the day — same word for the whole local day. */
+/** Deterministic word of the day — identical on the server and every client.
+ *  A local-timezone day index can differ between the SSR host and the device
+ *  (e.g. server on UTC, user on UTC+6), which crashes React hydration at day
+ *  boundaries with two different words — so the index is derived from UTC,
+ *  which both sides always agree on. */
 export function wordOfTheDay(now = new Date()): CuratedWord {
-  const localDay = Math.floor(
-    (now.getTime() - now.getTimezoneOffset() * 60 * 1000) / 86_400_000
-  );
-  return CURATED[localDay % CURATED.length];
+  const utcDay = Math.floor(now.getTime() / 86_400_000);
+  return CURATED[utcDay % CURATED.length];
 }
 
 export function curatedByTopic(topic: string): CuratedWord[] {

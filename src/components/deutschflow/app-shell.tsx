@@ -76,8 +76,9 @@ const DRAG_THRESHOLD = 8;
 const DROP_MARGIN = 40;
 /** How far the capsule may drift past the first/last item (rubber-banded). */
 const OVERHANG = 36;
-/** How far it may drift off the bar across the nav axis (rubber-banded). */
-const CROSS_RANGE = 96;
+/** LOCKED to the bar: at most this far off its rail across the nav axis —
+ *  a subtle glassy give under the finger, never an escape into the page. */
+const CROSS_RANGE = 12;
 /** Distance from an item centre where the magnet starts pulling (px). */
 const MAGNET_RADIUS = 64;
 
@@ -415,12 +416,10 @@ function useLiquidNav(
           homeCross +
           (axis === 'x' ? ev.clientY - gesture.startY : ev.clientX - gesture.startX);
         let rail = rubberClamp(railRaw, lo, hi, OVERHANG);
-        let cross = rubberClamp(
-          crossRaw,
-          homeCross - CROSS_RANGE,
-          homeCross + CROSS_RANGE,
-          CROSS_RANGE,
-        );
+        // HARD-LOCKED cross rail: a pure elastic envelope around home that
+        // the capsule can never exceed (rubber() saturates exactly at
+        // CROSS_RANGE) — a glassy give under the finger, zero escape.
+        let cross = homeCross + rubber(crossRaw - homeCross, CROSS_RANGE);
 
         // Magnetic pull toward the nearest item centre: gentle far away,
         // committed close in — the capsule leans into its next home.
