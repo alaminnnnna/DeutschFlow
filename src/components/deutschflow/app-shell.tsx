@@ -386,8 +386,12 @@ function useLiquidNav(
             return;
           gesture.dragging = true;
           try {
-            // Keep receiving events even when the pointer leaves the capsule.
-            gesture.ul.setPointerCapture(gesture.pointerId);
+            // Capture the pressed BUTTON itself — for touch it is already the
+            // browser's implicit capture target, so this is retarget-free
+            // (retaking implicit capture to another element, like the ul,
+            // derails the gesture on Android Chrome), and for mouse it keeps
+            // events flowing if the cursor leaves the window mid-drag.
+            btn.setPointerCapture(gesture.pointerId);
           } catch {
             /* window listeners below keep the drag alive regardless */
           }
@@ -517,6 +521,12 @@ function useLiquidNav(
         if (gesture.dragging && ev.cancelable) ev.preventDefault();
       };
 
+      /** Android long-press opens a context menu (and cancels the pointer)
+       *  mid-drag — veto it while the glass is grabbed. */
+      const onContextMenu = (ev: MouseEvent) => {
+        if (gesture.dragging) ev.preventDefault();
+      };
+
       gesture = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -537,6 +547,7 @@ function useLiquidNav(
           window.removeEventListener('pointerup', onUp);
           window.removeEventListener('pointercancel', onCancel);
           window.removeEventListener('touchmove', onTouchMove);
+          window.removeEventListener('contextmenu', onContextMenu);
           if (gesture.raf !== null) cancelAnimationFrame(gesture.raf);
           gesture.raf = null;
         },
@@ -544,6 +555,7 @@ function useLiquidNav(
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
+      window.addEventListener('contextmenu', onContextMenu);
       if (e.pointerType === 'touch') {
         window.addEventListener('touchmove', onTouchMove, { passive: false });
       }
@@ -566,11 +578,6 @@ function useLiquidNav(
       y,
     ],
   );
-
-  /** Unexpected capture loss mid-drag (element removed, browser takeover). */
-  const onLostCapture = useCallback(() => {
-    if (gestureRef.current?.dragging) abortGesture();
-  }, [abortGesture]);
 
   /** After a real drag, the release click must not navigate a second time —
    *  swallow exactly that pointer-initiated click. Keyboard activation
@@ -606,7 +613,6 @@ function useLiquidNav(
     scaleY,
     dragging,
     onPointerDown,
-    onLostCapture,
     onClickCapture,
   };
 }
@@ -720,7 +726,6 @@ function DesktopDock({
     scaleY,
     dragging,
     onPointerDown,
-    onLostCapture,
     onClickCapture,
   } = useLiquidNav(NAV_ITEMS.length, activeIndex, 'y', onSectionChange);
 
@@ -742,8 +747,8 @@ function DesktopDock({
           <ul
             onKeyDown={handleNavKeys}
             onPointerDown={onPointerDown}
-            onLostPointerCapture={onLostCapture}
             onClickCapture={onClickCapture}
+            onDragStart={(e) => e.preventDefault()}
             className="relative touch-none select-none space-y-1"
           >
             {rect && (
@@ -833,7 +838,6 @@ function FloatingTabBar({
     scaleY,
     dragging,
     onPointerDown,
-    onLostCapture,
     onClickCapture,
   } = useLiquidNav(items.length, activeIndex, 'x', onSectionChange);
 
@@ -845,8 +849,8 @@ function FloatingTabBar({
       <ul
         onKeyDown={handleNavKeys}
         onPointerDown={onPointerDown}
-        onLostPointerCapture={onLostCapture}
         onClickCapture={onClickCapture}
+        onDragStart={(e) => e.preventDefault()}
         className="df-nav-glass pointer-events-auto relative flex touch-none select-none items-center gap-0.5 rounded-[26px] border border-border/70 bg-card/72 p-1.5 shadow-[0_12px_36px_-10px_rgba(15,26,46,0.35)] backdrop-blur-2xl backdrop-saturate-150"
       >
         {rect && (

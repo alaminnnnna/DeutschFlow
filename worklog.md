@@ -113,3 +113,19 @@ Stage Summary:
 - Files changed: src/components/deutschflow/app-shell.tsx, public/sw.js
 - Phone healing flow: first open swaps worker + purges caches, next reload runs fully fresh code
 - Pushed to https://github.com/alaminnnnna/DeutschFlow.git main
+
+---
+Task ID: 5
+Agent: main (Z.ai)
+Task: Swipe works in Safari but not in Android Chrome — fix + push
+
+Work Log:
+- Analyzed Chromium-specific gesture hazards in the drag path: (1) the grab called ul.setPointerCapture() which RETARGETS a touch pointer's implicit capture away from the pressed button — a known Android Chrome derailment (events can stop or pointercancel); iOS Safari tolerates it, mouse has no implicit capture, which exactly matches the Safari-yes/Chrome-no/mouse-yes report.
+- Fix: capture the pressed BUTTON itself (already the browser's implicit touch capture target — retarget-free; for mouse it still keeps events flowing outside the window). Removed the now-dead ul onLostPointerCapture wiring from the hook and both navs.
+- Added a per-gesture contextmenu veto (Android long-press opens a context menu mid-drag and cancels the pointer) and onDragStart preventDefault on both nav ULs.
+- Verified: touch drag survives an injected contextmenu event mid-drag, settles scale 1, drop navigates, plain tap navigates; desktop mouse drag regression-checked; zero console errors; eslint clean; production build OK; dev server restarted.
+
+Stage Summary:
+- Files changed: src/components/deutschflow/app-shell.tsx
+- If the phone still misbehaves: one open swaps the SW (skipWaiting+purge), next reload runs this code
+- Pushed to https://github.com/alaminnnnna/DeutschFlow.git main
