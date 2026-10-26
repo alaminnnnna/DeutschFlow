@@ -1,0 +1,1149 @@
+# GOD-TIER PROJECT PROMPT — DeutschFlow
+## Premium German Learning Platform | Listening • Pronunciation • Vocabulary • Speaking
+
+You are a principal software engineer, senior product designer, German phonetics specialist, performance engineer, and QA architect.
+
+Build **DeutschFlow**, an exceptionally polished, fast, mobile-first German learning web application designed primarily for Bengali-speaking learners progressing from A1 to B1 and beyond.
+
+This must be a real, production-quality application—not a prototype, static mockup, or collection of disconnected components.
+
+The product should combine the best ideas from modern language-learning apps, premium audio tools, vocabulary trainers, and minimalist productivity software into one coherent experience.
+
+The core experience is:
+
+**Type anything → automatically detect the language → obtain the correct German text → hear natural German pronunciation → see reliable Bengali pronunciation → understand the meaning → save useful vocabulary → review it later.**
+
+Every interaction must feel intentional, immediate, and beautifully animated.
+
+---
+
+# 1. NON-NEGOTIABLE PRODUCT PRINCIPLES
+
+1. Language detection must happen automatically.
+2. German input must play directly without translation.
+3. English and Bengali input must be translated into German when appropriate.
+4. German audio must use a genuine German speech engine, not English TTS pretending to pronounce German.
+5. Bengali pronunciation must be generated from German pronunciation rules or a suitable phonetic engine—not by blindly replacing letters.
+6. The user must be able to save individual words, complete sentences, meanings, and pronunciation notes to a personal vocabulary collection.
+7. Frequently used translations, pronunciation results, and audio must be cached intelligently.
+8. Repeated actions should be extremely fast.
+9. The entire application must work beautifully on phones, tablets, laptops, and desktop monitors.
+10. Never fake functionality, fabricate API responses, or claim that an unsupported feature works.
+11. Prefer free, local, open-source, and low-cost solutions when they provide sufficient quality.
+12. No unnecessary authentication, infrastructure, dependencies, or paid services.
+
+Before writing code, inspect the existing repository, installed packages, project architecture, deployment environment, and available configuration. Preserve useful existing work. Do not blindly replace the project or introduce a new framework without justification.
+
+---
+
+# 2. PREMIUM UI/UX DESIGN SYSTEM
+
+Design a visually distinctive language-learning product. Avoid generic AI dashboards and ordinary CRUD interfaces.
+
+## Visual direction
+
+Use a combination of:
+- Premium editorial typography.
+- Warm neutral backgrounds.
+- Rich charcoal or navy text.
+- Restrained emerald or teal accents.
+- Carefully designed cards and floating controls.
+- Subtle surface depth and thin borders.
+- Generous but efficient spacing.
+- Consistent corner radii.
+- Crisp icons and precise alignment.
+- Excellent Bengali and German typography.
+
+Use Lucide React icons. Do not use emojis as interface icons.
+
+Typography must render Bengali Unicode correctly. Select suitable fonts for Bengali and Latin scripts, such as Noto Sans Bengali and Inter, with appropriate fallbacks. Use a reliable loading strategy and avoid layout shifts when fonts load.
+
+The interface must remain beautiful with long Bengali translations, long German compound words, special characters, and multiline sentences.
+
+## Motion design
+
+Create a consistent motion system rather than adding random animations.
+
+Implement:
+- Smooth page and tab transitions.
+- Subtle card entrance animations.
+- Animated play/pause state transitions.
+- A lightweight audio playback indicator.
+- Smooth vocabulary-save feedback.
+- Animated loading placeholders.
+- Small button press and hover interactions.
+- Expandable word details.
+- Animated toast notifications.
+- Smooth theme transitions.
+- Motion-aware navigation on mobile.
+- Respect for `prefers-reduced-motion`.
+
+Suggested timing:
+- Micro-interactions: 120–180 ms.
+- Button and control transitions: 160–220 ms.
+- Card and panel transitions: 220–320 ms.
+
+Use transforms and opacity where possible. Avoid expensive blur animations, continuous decorative animations, unnecessary particles, and excessive shadows.
+
+Animations must not delay audio playback, typing, saving, or navigation.
+
+## Responsive layouts
+
+Support at least:
+- 320 px small phones.
+- 360–430 px modern phones.
+- 768 px tablets.
+- 1024 px compact laptops.
+- 1280–1920 px desktop displays.
+
+Desktop:
+- A compact navigation sidebar.
+- A spacious central listening workspace.
+- An optional vocabulary or session-history panel.
+- A sensible maximum content width.
+
+Mobile:
+- A dedicated mobile-first layout.
+- Bottom navigation for primary destinations.
+- Large touch targets.
+- A comfortable single-column listening interface.
+- A sticky input/action area where appropriate.
+- Safe-area support for modern phones.
+- No horizontal scrolling or clipped controls.
+- No hover-only interactions.
+
+Use responsive typography with `clamp()` where appropriate. Keep the interface dense enough to be useful without feeling crowded.
+
+## Theme support
+
+Implement:
+- Light theme.
+- Dark theme.
+- System theme preference.
+- Persisted user preference.
+- Correct contrast in every state.
+- Consistent colors for German text, Bengali pronunciation, meanings, errors, and playback states.
+
+---
+
+# 3. APPLICATION INFORMATION ARCHITECTURE
+
+Create these main sections:
+
+1. **Listen** — the primary German listening workspace.
+2. **Vocabulary** — saved words and expressions.
+3. **Review** — spaced-repetition vocabulary practice.
+4. **History** — previously processed sentences.
+5. **Progress** — useful learning statistics and activity.
+6. **Settings** — speech, pronunciation, caching, appearance, and data management.
+
+Do not overload the first screen with every feature. Listening must remain the dominant, immediately accessible experience.
+
+Use a reusable component system, consistent design tokens, and clear separation between UI, application logic, data persistence, and external providers.
+
+---
+
+# 4. THE PRIMARY LISTENING WORKSPACE
+
+This is the heart of the application. Spend the greatest amount of design and engineering effort here.
+
+## Input area
+
+Provide one excellent multilingual text input.
+
+Placeholder:
+
+"বাংলা, English অথবা Deutsch লিখুন..."
+
+Requirements:
+- Automatically detect the likely language.
+- Support Bengali, English, German, German umlauts, ß, punctuation, and pasted multiline text.
+- Enter submits the current sentence.
+- Shift+Enter inserts a newline.
+- Preserve the input while processing.
+- Include a clear-input control.
+- Provide a compact history of recent inputs.
+- Include optional microphone input through the browser's supported speech-recognition API, with a graceful fallback when unavailable.
+- Never require microphone permission for normal text input.
+- Prevent accidental duplicate submissions.
+- Cancel or invalidate stale translation requests when the user submits newer input.
+
+The primary button should be visually prominent and say:
+
+**Listen Now**
+
+On desktop, provide an appropriate keyboard shortcut and display it unobtrusively.
+
+The user should not need to choose the input language manually in the normal workflow.
+
+## One-action processing pipeline
+
+When the user submits text, execute this pipeline:
+
+1. Normalize whitespace without changing meaningful spelling or punctuation.
+2. Detect the probable input language.
+3. Determine whether the text is German, English, Bengali, or ambiguous.
+4. Apply the appropriate processing route.
+5. Obtain German text if translation is necessary.
+6. Generate or retrieve the Bengali pronunciation.
+7. Prepare the German speech engine.
+8. Start playback as soon as the required German text and speech engine are ready.
+9. Display the German sentence, Bengali pronunciation, and meaning.
+10. Save the result in local history when appropriate.
+
+For short inputs, optimize for minimal perceived latency.
+
+**Do not wait for optional explanations, word analysis, or vocabulary metadata before starting audio.** Load these details progressively after the main result is available.
+
+For German input, do not call the translation provider unnecessarily.
+
+For English and Bengali input, do not play the original English or Bengali text as the German result.
+
+When a translation or pronunciation provider fails, display an understandable error and provide an appropriate retry action.
+
+## Processing states
+
+Implement explicit states:
+- Idle.
+- Detecting language.
+- Translating.
+- Preparing audio.
+- Playing.
+- Paused.
+- Finished.
+- Failed.
+- Cached result ready.
+
+Avoid flashing several unnecessary loading indicators during a fast cached response.
+
+If German audio is already available, start playback immediately after the user's gesture whenever browser policies permit.
+
+If the text requires translation, begin playback immediately when the translated German text becomes available. Do not falsely claim that translation or playback has completed before it actually has.
+
+---
+
+# 5. INTELLIGENT LANGUAGE DETECTION
+
+Implement a dedicated language-detection service with a confidence score and clear routing logic.
+
+Use Unicode character analysis, script detection, lightweight language identification, and contextual checks as appropriate.
+
+Support:
+- German.
+- English.
+- Bengali.
+- Mixed-language text.
+- Very short text.
+- Single German words.
+- German questions and sentences.
+- Names and abbreviations.
+
+## Routing rules
+
+### German detected
+
+Example input:
+
+`ihr`
+
+Expected behavior:
+- German text: `ihr`
+- No translation request.
+- Play German pronunciation directly.
+- Show Bengali-script pronunciation.
+- Show an optional Bengali meaning, where context permits.
+- Indicate that German was detected.
+- Make replay immediately available.
+
+Example status:
+
+"জার্মান ইনপুট · সরাসরি প্লে"
+
+### English detected
+
+Example:
+
+`Good morning`
+
+Expected behavior:
+- Translate to `Guten Morgen`.
+- Play German audio.
+- Show Bengali pronunciation.
+- Show the Bengali meaning.
+
+### Bengali detected
+
+Example:
+
+`আমি জার্মান শিখছি`
+
+Expected behavior:
+- Translate into natural German.
+- Play the German translation.
+- Display Bengali pronunciation.
+- Show the meaning and, where useful, a brief grammar note.
+
+### Ambiguous text
+
+Short words can belong to multiple languages. Never pretend detection is perfect.
+
+Use a confidence threshold and an intelligent fallback. If a word could plausibly be English or German, prefer a safe default informed by context and recent activity. Offer a small, unobtrusive way to switch the interpretation without making language selection mandatory.
+
+Never let a low-confidence language guess trigger an expensive API call without a good reason.
+
+Do not automatically classify every Latin-script input as German.
+
+---
+
+# 6. GERMAN PRONUNCIATION ENGINE — CRITICAL
+
+Build this as an independent, replaceable module.
+
+The pronunciation engine must understand that German spelling, phonetic pronunciation, audio synthesis, and Bengali transliteration are related but distinct.
+
+## The `ihr` problem
+
+The app must handle words such as:
+
+`ihr`
+
+Expected result:
+
+German text:
+`ihr`
+
+Bengali pronunciation aid:
+`ইয়া` or another carefully selected Bengali approximation appropriate to the configured pronunciation standard.
+
+Do not blindly produce `ঈয়ার` by copying an assumed final `r` into Bengali. In standard German, the `r` in this word is commonly vocalized rather than pronounced as a strong Bengali-style consonant. The exact realization varies by accent and speaking context.
+
+The actual German audio must remain the authoritative pronunciation reference.
+
+## Pronunciation architecture
+
+Implement a layered pipeline:
+
+1. German text normalization.
+2. Word tokenization that preserves punctuation.
+3. Lookup in a curated pronunciation lexicon.
+4. Lookup in a reliable German pronunciation dictionary or phonetic resource, if available.
+5. IPA or equivalent phonetic representation where supported.
+6. German-specific grapheme-to-phoneme rules.
+7. Context-sensitive pronunciation handling.
+8. Bengali-script approximation.
+9. Confidence and source metadata.
+10. Fallback when the pronunciation is uncertain.
+
+Prioritize curated, verified entries for common A1/A2 vocabulary and irregular words.
+
+Do not use a simplistic regex substitution engine as the sole pronunciation solution.
+
+Do not invent a perfect IPA transcription when no reliable pronunciation source exists.
+
+## German pronunciation cases
+
+Handle, at minimum:
+- `ch` in different phonetic contexts.
+- `sch`.
+- `sp` and `st` at the beginning of words and syllables.
+- `z`.
+- `w`.
+- `v`.
+- `j`.
+- `ei`.
+- `ie`.
+- `eu` and `äu`.
+- `ä`, `ö`, and `ü`.
+- `ß`.
+- Consonant clusters.
+- Final consonant devoicing.
+- Common unstressed endings.
+- Vocalized `r`.
+- Long and short vowels.
+- Word stress when supported.
+- Compound nouns.
+- Punctuation and sentence intonation.
+
+Avoid applying a rule blindly where lexical exceptions exist.
+
+## Bengali pronunciation display
+
+Present pronunciation as an accessible learning aid, not a claim of exact phonetic equivalence.
+
+Example result card:
+
+GERMAN PRONUNCIATION
+
+`ihr`
+
+**বাংলা উচ্চারণ**
+
+`ইয়া`
+
+"আনুমানিক উচ্চারণ — সঠিক ধ্বনির জন্য অডিও শুনুন।"
+
+The result must be generated by the actual pronunciation pipeline, not hardcoded into the UI.
+
+For uncertain words, show a small confidence/source indicator or offer a more detailed phonetic view.
+
+Allow the user to report an incorrect pronunciation approximation. Save corrections locally and use them as personal overrides, rather than silently treating every user correction as a universal linguistic truth.
+
+## Word-by-word pronunciation
+
+For longer sentences, provide a word breakdown that preserves original German spelling and punctuation.
+
+Example:
+
+`Guten Morgen! Wie geht es dir?`
+
+- `Guten` — Bengali pronunciation aid.
+- `Morgen` — Bengali pronunciation aid.
+- `Wie` — Bengali pronunciation aid.
+- `geht` — Bengali pronunciation aid.
+- `es` — Bengali pronunciation aid.
+- `dir` — Bengali pronunciation aid.
+
+Clicking a word should:
+- Highlight the selected word.
+- Show its meaning when available.
+- Display its pronunciation.
+- Allow the word to be spoken separately.
+- Provide a one-click option to save it to vocabulary.
+
+Do not require word-by-word analysis before the full sentence can play.
+
+---
+
+# 7. GERMAN TEXT-TO-SPEECH ENGINE
+
+Implement a robust speech service using the browser's Web Speech API initially.
+
+## Voice selection
+
+- Prefer voices with the `de-DE` language tag.
+- Use other appropriate German voices only as a documented fallback.
+- Never silently fall back to an English voice for German text.
+- Handle voice lists that load asynchronously.
+- Re-evaluate voice availability when the browser reports changes.
+- Remember a user's chosen German voice when possible.
+- Explain when the browser does not have a suitable German voice.
+
+The application must not claim that a voice is native-quality or perfectly natural merely because it has a German language tag.
+
+## Playback controls
+
+Provide:
+- Play.
+- Pause.
+- Resume.
+- Stop.
+- Replay.
+- Slow playback.
+- Normal playback.
+- Slightly faster playback.
+- Optional word-level playback.
+- Clear playback status.
+- Audio completion handling.
+
+Use sensible initial speeds, such as 0.75×, 1×, and 1.25×.
+
+Do not start overlapping utterances. Cancel or finish the previous utterance according to the intended action.
+
+Ensure playback controls remain accessible on mobile.
+
+## Important browser limitations
+
+Browser TTS does not guarantee identical audio across devices, and `speechSynthesis` does not consistently expose reusable audio files or true waveform data.
+
+Therefore:
+- Do not pretend browser speech is an MP3 cache.
+- Do not fabricate a waveform.
+- Use a real, lightweight playback animation when the speech engine reports an active utterance.
+- Keep voice settings separate from pronunciation rendering.
+- If an external TTS provider is added, use a real audio asset or stream and document its requirements.
+
+---
+
+# 8. AUTOMATIC VOCABULARY LEARNING SYSTEM
+
+Vocabulary learning is a first-class product feature, not an afterthought.
+
+Every German word or expression should be saveable in one action.
+
+## Save vocabulary
+
+Provide a bookmark or plus control next to German words and on the result card.
+
+When saving a word, store:
+
+- German word or expression.
+- Bengali meaning.
+- English meaning, when available.
+- Bengali pronunciation.
+- German example sentence.
+- Bengali translation of the example.
+- Word class.
+- Grammatical gender for nouns.
+- Plural form for nouns, when known.
+- Infinitive and relevant verb forms, when useful.
+- Separable or inseparable verb information, when applicable.
+- CEFR level, when reliably available.
+- Topic or category.
+- Date added.
+- Review status.
+- User notes.
+- Source sentence.
+- Optional pronunciation source and confidence.
+
+Do not fabricate grammatical information. Unknown fields should remain unknown rather than receive invented values.
+
+## Vocabulary interface
+
+Create a premium vocabulary library with:
+- Search-as-you-type.
+- Filters by A1/A2/B1 and other supported levels.
+- Filters by noun, verb, adjective, phrase, and other parts of speech.
+- Filters by topic.
+- Favorites.
+- Recently added.
+- Due for review.
+- Sorting by date, alphabet, and review status.
+- Pagination or efficient virtualization for large lists.
+- Bulk export.
+- Bulk selection.
+- Edit and delete.
+- Duplicate detection.
+- Import from supported JSON or CSV formats.
+- Clear empty states.
+
+Support Bengali and German text search, including sensible handling of German umlauts.
+
+## Example vocabulary card
+
+German:
+`die Entscheidung`
+
+Bengali meaning:
+`সিদ্ধান্ত`
+
+Pronunciation:
+Generated Bengali approximation.
+
+Grammar:
+- Article: `die`
+- Plural: only display when supported by the vocabulary source.
+
+Example:
+`Ich muss eine Entscheidung treffen.`
+
+Bengali meaning:
+`আমাকে একটি সিদ্ধান্ত নিতে হবে।`
+
+Actions:
+- Play German.
+- Play the word.
+- Show details.
+- Edit.
+- Add a personal note.
+- Mark as learned.
+- Add to favorites.
+
+## Duplicate handling
+
+When the user saves an existing word:
+- Do not create an unnecessary duplicate.
+- Offer to update the existing entry or add another example sentence.
+- Preserve previously saved notes and review history unless the user explicitly changes them.
+
+---
+
+# 9. SPACED REPETITION AND ACTIVE RECALL
+
+Build a practical review system for long-term vocabulary retention.
+
+Implement a simple, documented spaced-repetition algorithm, such as a well-tested SM-2-style scheduling approach.
+
+Each review card should support:
+- Show German word.
+- Recall the meaning before revealing it.
+- Reveal Bengali meaning.
+- Play pronunciation.
+- Listen and repeat.
+- Rate recall as Again, Hard, Good, or Easy.
+- Schedule the next review.
+- Track review history.
+
+Do not punish the user for missing days.
+
+Provide:
+- Daily review queue.
+- Due vocabulary count.
+- Session progress.
+- Correct and incorrect recall statistics.
+- A quick exit that preserves progress.
+- A setting for the preferred daily review target.
+
+Store review timestamps consistently and calculate due dates without confusing UTC storage with the user's local date.
+
+The review interface should be fast and distraction-free.
+
+---
+
+# 10. MEANING, CONTEXT, AND GRAMMAR
+
+Provide contextual meaning rather than misleading one-word translations.
+
+For German words with multiple meanings, explain the most likely meaning in context and clearly distinguish alternative meanings.
+
+Support:
+- Bengali meaning.
+- Optional English meaning.
+- Word class.
+- Article and grammatical gender.
+- Singular and plural.
+- Common verb conjugations.
+- Infinitive and separable-prefix information.
+- Basic case information when relevant.
+- Common collocations.
+- Example sentences.
+- Formal versus informal usage when useful.
+
+For A1 learners, keep explanations concise and understandable.
+
+Provide optional detail expansion instead of flooding the default result with grammar.
+
+Do not confuse:
+- `du` versus `Sie`.
+- `ihr` as a pronoun versus its possible grammatical functions.
+- Dictionary meanings versus contextual meanings.
+- Singular versus plural.
+- German spelling versus spoken pronunciation.
+
+When context is insufficient to determine the meaning, display the likely alternatives rather than inventing certainty.
+
+---
+
+# 11. HIGH-PERFORMANCE CACHING ARCHITECTURE
+
+Performance is a core product requirement.
+
+The app must feel fast even when a translation provider is slow or unavailable.
+
+Design caching at several independent layers.
+
+## Layer 1: In-memory cache
+
+Cache frequently accessed results during the current session.
+
+Suitable entries:
+- Language detection.
+- Normalized German text.
+- Translation results.
+- Pronunciation results.
+- Tokenization.
+- Word metadata.
+
+Use bounded caches with an appropriate eviction strategy such as LRU.
+
+Avoid retaining unlimited sentence histories in memory.
+
+## Layer 2: Persistent browser cache
+
+Use IndexedDB for structured, reusable data.
+
+Cache:
+- Translation results.
+- Bengali pronunciation results.
+- Vocabulary metadata.
+- Frequently used language resources.
+- Reusable phonetic lookup results.
+- User preferences where appropriate.
+
+Use localStorage only for small settings and lightweight preferences.
+
+Avoid storing large collections in localStorage.
+
+## Layer 3: Audio cache
+
+For external TTS providers that return actual audio:
+- Cache reusable audio assets using appropriate browser storage.
+- Store metadata separately.
+- Reuse identical audio where the text, voice, speed, and provider configuration match.
+- Handle quota limits and eviction.
+- Provide cache clearing.
+- Never assume that Web Speech API utterances can be saved as audio files.
+
+For browser-native TTS, cache voice selection and prepared speech metadata, not imaginary audio blobs.
+
+## Layer 4: HTTP and service-worker cache
+
+If a backend and PWA are implemented:
+- Use appropriate HTTP caching headers.
+- Cache static assets aggressively when safe.
+- Use versioned asset names.
+- Avoid caching private responses as public assets.
+- Use service-worker strategies appropriate to each resource type.
+- Never cache API responses containing secrets.
+- Provide predictable cache invalidation after deployments.
+
+## Cache correctness
+
+Cache keys must include all relevant parameters.
+
+Examples:
+- Normalized source text.
+- Source language.
+- Target language.
+- Translation provider and model/version.
+- Pronunciation provider and ruleset version.
+- Voice identifier.
+- Speech rate where applicable.
+- Output format for generated audio.
+
+Normalize only what is safe to normalize. Do not merge strings with meaningfully different punctuation, language context, or pronunciation.
+
+Version cached results so pronunciation-rule updates invalidate outdated data.
+
+Use TTLs where provider data can change and deterministic cache reuse where appropriate.
+
+## Fast interaction strategy
+
+- Start German audio without waiting for optional grammar analysis.
+- Run independent metadata requests in parallel when safe.
+- Debounce search inputs.
+- Prefetch likely next vocabulary items only when it provides a measurable benefit.
+- Avoid duplicate network requests for identical in-flight operations.
+- Reuse previously fetched results.
+- Cancel obsolete requests.
+- Keep the main thread free during heavy processing.
+- Avoid unnecessary rerenders.
+- Lazy-load secondary pages and heavy libraries.
+- Do not install a large state-management library unless the project genuinely needs it.
+
+## Offline behavior
+
+Support offline access to:
+- The application shell, where PWA support is implemented.
+- Previously saved vocabulary.
+- Local history.
+- Cached translations and pronunciation results.
+- Basic phonetic rules and curated word entries.
+
+Clearly distinguish cached/offline capabilities from online-only translation and TTS capabilities.
+
+Never claim arbitrary new text can be translated offline unless a suitable local translation engine is actually installed.
+
+---
+
+# 12. DATA MODEL AND PERSISTENCE
+
+Use a clear, typed data model.
+
+Suggested entities:
+
+### VocabularyEntry
+- `id`
+- `german`
+- `bengaliMeaning`
+- `englishMeaning`
+- `bengaliPronunciation`
+- `ipa`
+- `partOfSpeech`
+- `article`
+- `plural`
+- `lemma`
+- `examples`
+- `cefrLevel`
+- `tags`
+- `notes`
+- `favorite`
+- `createdAt`
+- `updatedAt`
+
+### ExampleSentence
+- `id`
+- `german`
+- `bengaliMeaning`
+- `englishMeaning`
+- `source`
+- `pronunciationMetadata`
+
+### ReviewRecord
+- `id`
+- `vocabularyEntryId`
+- `reviewedAt`
+- `rating`
+- `nextReviewAt`
+- `interval`
+- `easeFactor`
+- `repetitions`
+
+### ListeningHistory
+- `id`
+- `inputText`
+- `detectedLanguage`
+- `germanText`
+- `bengaliMeaning`
+- `bengaliPronunciation`
+- `createdAt`
+
+### CacheEntry
+- `key`
+- `value`
+- `createdAt`
+- `expiresAt`
+- `version`
+- `size`
+
+Use schema validation and database migrations when appropriate.
+
+Prefer IndexedDB, with a suitable wrapper such as Dexie if justified by the project, for substantial client-side storage.
+
+Support exporting user data so the user does not lose their vocabulary.
+
+Do not introduce a remote database simply to store data that can remain private and local.
+
+If cloud synchronization is implemented later, make it optional and design the data layer so it can be added without rewriting the application.
+
+---
+
+# 13. SEARCH, DISCOVERY, AND DAILY LEARNING
+
+Add a compact discovery experience with useful A1 vocabulary organized by:
+- Greetings.
+- Family.
+- Numbers.
+- Time and dates.
+- Food.
+- Shopping.
+- Travel.
+- Transport.
+- Home.
+- School and work.
+- Health and everyday needs.
+- Common verbs.
+- Common adjectives.
+- Questions and answers.
+
+Include:
+- Word of the day.
+- Random saved word.
+- Recently practiced words.
+- Frequently missed words.
+- Daily review suggestions.
+- A1 vocabulary collections.
+- Search for saved and curated vocabulary.
+
+Use a verified, legally usable source for any packaged vocabulary dataset. Record source and licensing information in the repository.
+
+Do not fabricate a claim such as "official Goethe vocabulary" without verifying the dataset and its licensing.
+
+---
+
+# 14. OPTIONAL SPEAKING PRACTICE
+
+Implement speaking practice as an optional feature, not a prerequisite for listening.
+
+When browser speech recognition is available:
+1. Play the German sentence.
+2. Let the user record or dictate their attempt.
+3. Display the recognized text.
+4. Compare the recognized text with the target.
+5. Highlight likely word differences.
+6. Let the user listen again and retry.
+
+Explain that speech recognition is not a reliable measure of accent quality or exact pronunciation accuracy.
+
+Do not assign fake phonetic accuracy percentages when the underlying technology cannot measure them.
+
+Do not upload microphone recordings without clear consent.
+
+If recording or speech recognition is unsupported, keep the rest of the application functional and provide a helpful fallback.
+
+---
+
+# 15. SETTINGS AND PERSONALIZATION
+
+Provide settings for:
+- Theme.
+- Preferred German voice.
+- Playback speed.
+- Automatic playback after translation.
+- Automatic playback when opening a saved word.
+- Preferred translation display.
+- Vocabulary review target.
+- Pronunciation display style.
+- History retention.
+- Cache size or cache clearing.
+- Exporting and importing data.
+- Resetting the application.
+
+Use sensible defaults so the user can start learning immediately.
+
+The default flow should require no account creation, configuration wizard, or API setup if the chosen implementation can provide its core features without them.
+
+If a feature requires an API key, isolate it behind a clear configuration interface and explain its limitations.
+
+---
+
+# 16. RECOMMENDED TECHNICAL ARCHITECTURE
+
+Inspect the existing repository before choosing the final architecture.
+
+Preferred starting point:
+- Vite.
+- React.
+- TypeScript.
+- Tailwind CSS.
+- Lucide React.
+- IndexedDB, using Dexie if appropriate.
+- Browser Speech Synthesis API.
+- A modular translation provider.
+- A modular pronunciation provider.
+- Vitest for unit tests.
+- React Testing Library for UI tests.
+- Playwright for end-to-end tests, if the environment supports it.
+
+Use stable, maintained dependencies and pin versions appropriately.
+
+Avoid adding a complex backend, ORM, Redis, queues, or cloud services without a concrete need.
+
+A minimal backend is acceptable when required to protect API keys or provide a secure provider proxy.
+
+Suggested structure:
+
+`src/`
+- `app/`
+- `components/`
+- `features/listening/`
+- `features/vocabulary/`
+- `features/review/`
+- `features/history/`
+- `features/progress/`
+- `features/settings/`
+- `services/language-detection/`
+- `services/translation/`
+- `services/pronunciation/`
+- `services/speech/`
+- `services/cache/`
+- `services/storage/`
+- `services/vocabulary/`
+- `hooks/`
+- `lib/`
+- `styles/`
+- `types/`
+
+Adjust the structure if the existing project already has a better organization.
+
+---
+
+# 17. SECURITY, PRIVACY, AND RELIABILITY
+
+- Never expose private API keys in frontend bundles.
+- Validate user input and provider responses.
+- Handle malformed Unicode and unexpected text safely.
+- Do not execute user input as code.
+- Avoid unsafe HTML injection.
+- Use timeouts and cancellation for network requests.
+- Handle rate limits and provider failures gracefully.
+- Avoid infinite retry loops.
+- Prevent duplicate writes.
+- Protect local data from accidental destructive actions.
+- Confirm irreversible bulk deletion.
+- Keep user vocabulary local by default.
+- Explain when text must be sent to an external translation or speech provider.
+- Do not store unnecessary personal information.
+- Use an appropriate content security policy if a backend deployment supports it.
+
+The app should remain usable even when an external provider is unavailable.
+
+---
+
+# 18. ACCESSIBILITY AND INTERNATIONALIZATION
+
+The UI language should be Bangla-first, with German learning content presented clearly.
+
+Support:
+- Bangla labels and instructions.
+- German text with correct Unicode.
+- Optional English interface labels where useful.
+- Keyboard navigation.
+- Visible focus indicators.
+- Semantic HTML.
+- Accessible names for icon-only controls.
+- Adequate color contrast.
+- Screen-reader-friendly playback states.
+- Reduced-motion preferences.
+- Text scaling.
+- Long text wrapping.
+
+Do not use color alone to communicate status.
+
+Make the interface comfortable for users who do not yet understand German.
+
+---
+
+# 19. AUTOMATED TESTING AND QUALITY GATES
+
+Write actual tests for critical functionality.
+
+## Language detection tests
+
+Test:
+- `ihr` → German direct playback.
+- `Guten Morgen` → German direct playback.
+- `Good morning` → English-to-German translation.
+- `আমি ভালো আছি` → Bengali-to-German translation.
+- German umlauts and ß.
+- Punctuation.
+- Empty input.
+- Whitespace-only input.
+- Mixed-language text.
+- Ambiguous short strings.
+
+Verify that direct German input never calls the translation provider unnecessarily.
+
+## Pronunciation tests
+
+Test:
+- Curated lexical overrides.
+- `ihr`.
+- `ich`.
+- `nicht`.
+- `schön`.
+- `Deutsch`.
+- `Guten Morgen`.
+- Long compound nouns.
+- Punctuation preservation.
+- Unknown words.
+- Pronunciation-rule version invalidation.
+
+Do not assert a single universal Bengali spelling when multiple approximations are defensible. Assert the selected configured output and verify that it originates from the pronunciation engine.
+
+## Audio tests
+
+Verify:
+- Correct German voice selection.
+- No English-voice fallback masquerading as German.
+- Play, pause, resume, stop, and replay.
+- Playback rate changes.
+- Voice-list loading.
+- Duplicate-play prevention.
+- Missing-voice handling.
+- Browser API unavailability.
+- Correct state transitions.
+
+Mock browser speech APIs in automated tests where necessary. Use manual browser testing to validate actual voice behavior.
+
+## Vocabulary tests
+
+Verify:
+- Saving.
+- Duplicate detection.
+- Editing.
+- Deleting.
+- Search.
+- Filters.
+- Export and import.
+- Persistence after reload.
+- Review scheduling.
+- Local timezone behavior.
+
+## Performance tests
+
+Measure:
+- Initial JavaScript bundle size.
+- Largest contentful paint.
+- Interaction to next paint.
+- Layout shifts.
+- Time to display cached results.
+- Time to start speech after translation is ready.
+- Number of unnecessary network requests.
+- Memory usage during large vocabulary searches.
+
+Use Lighthouse or equivalent tooling when available.
+
+Set realistic budgets based on the selected dependencies and environment. Report actual measurements instead of claiming arbitrary performance scores.
+
+Aim for a fast initial render and a near-instant response for cached operations.
+
+## Responsive testing
+
+Test the application at 320, 375, 768, 1024, 1440, and 1920 pixels.
+
+Verify:
+- No horizontal overflow.
+- No clipped Bengali characters.
+- No clipped German compound words.
+- Accessible touch targets.
+- Usable playback controls.
+- Proper sidebar-to-mobile-navigation transition.
+- Correct theme contrast.
+
+---
+
+# 20. DEFINITION OF DONE
+
+The application is not complete until all of the following are satisfied:
+
+- The project starts successfully.
+- The production build passes.
+- German direct input works without unnecessary translation.
+- English and Bengali inputs follow the correct translation flow.
+- German audio uses an appropriate German voice.
+- Bengali pronunciation is generated through a real pronunciation pipeline.
+- The `ihr` example is handled by a lexical or phonetic pronunciation mechanism, not a hardcoded UI string.
+- Audio controls work.
+- Listening history persists.
+- Vocabulary can be saved, edited, searched, and deleted.
+- Vocabulary review works.
+- Cache invalidation works.
+- Offline behavior is accurately represented.
+- All major screens are responsive.
+- Critical tests pass.
+- No important buttons are decorative or nonfunctional.
+- Provider requirements and known limitations are documented.
+- No secrets are committed.
+- A README explains installation, development, configuration, testing, and deployment.
+
+If external API credentials are unavailable, finish the app with working local capabilities and a clear provider interface. Do not fake external translation, natural speech audio, or advanced pronunciation analysis.
+
+---
+
+# 21. EXECUTION INSTRUCTIONS FOR THE CODING AGENT
+
+Work in deliberate phases, but continue through implementation rather than stopping after planning.
+
+Phase 1 — Inspect the repository and document the existing architecture.
+
+Phase 2 — Establish design tokens, responsive layout, typography, navigation, and motion primitives.
+
+Phase 3 — Implement the language-detection and direct German playback pipeline.
+
+Phase 4 — Implement translation, pronunciation generation, caching, and error handling.
+
+Phase 5 — Implement vocabulary storage, history, search, and review scheduling.
+
+Phase 6 — Implement settings, offline support, optional speaking practice, and progress.
+
+Phase 7 — Write and run tests, fix failures, optimize performance, and verify responsive layouts.
+
+Phase 8 — Produce the final README and a concise completion report.
+
+After each phase, verify that the project still builds and that existing functionality remains intact.
+
+Do not stop to ask for approval after every small step. Make sensible engineering decisions, explain unavoidable trade-offs, and keep working until the deliverable is complete.
+
+Do not claim tests passed unless they actually ran successfully.
+
+# FINAL PRODUCT VISION
+
+DeutschFlow should feel like a carefully crafted, premium German-learning product—not a generic AI-generated website.
+
+The first screen should immediately communicate what to do. The primary listening action should be effortless. Pronunciation should be useful and linguistically responsible. Saved vocabulary should become a genuine long-term learning resource. Cached actions should feel immediate. Animations should feel smooth without sacrificing speed. The same quality should hold on a small Android phone and a large desktop monitor.
+
+**The defining interaction is:**
+
+Type → Automatic language detection → Correct German text → Immediate German audio → Bengali pronunciation → Meaning → Save vocabulary → Review and remember.
+
+Build the complete working product with this experience as the highest priority.
